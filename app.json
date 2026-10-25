@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Cinetor",
+    "slug": "cinetor",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "cinetor",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B0B10",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B0B10"
+    },
+    "android": {
+      "package": "com.cinetor.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0B0B10"
+      },
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "ACCESS_WIFI_STATE",
+        "CHANGE_WIFI_MULTICAST_STATE",
+        "FOREGROUND_SERVICE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_EXTERNAL_STORAGE"
+      ]
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

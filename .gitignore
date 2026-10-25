@@ -1,0 +1,12 @@
+node_modules/
+.expo/
+dist/
+android/
+ios/
+*.apk
+*.keystore
+!debug.keystore
+.env
+*.log
+.DS_Store
+cinetor-archive-*/

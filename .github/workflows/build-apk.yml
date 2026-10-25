@@ -1,0 +1,112 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: 'Build variant'
+        required: false
+        default: 'release'
+        type: choice
+        options: [release, debug]
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      EXPO_USE_FAST_RESOLVER: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install deps
+        run: npm ci --no-audit --no-fund
+
+      - name: Restore signing keystore (release)
+        if: ${{ github.ref_type == 'tag' || github.event.inputs.variant == 'release' }}
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 -d > android-release.keystore
+          echo "keystore ready"
+
+      - name: Expo prebuild (generate android/)
+        run: npx expo prebuild --platform android --clean --no-install
+
+      - name: Configure signing (release)
+        if: ${{ github.ref_type == 'tag' || github.event.inputs.variant == 'release' }}
+        run: |
+          cp android-release.keystore android/app/android-release.keystore
+          cat >> android/app/build.gradle <<'EOF'
+
+          android {
+            signingConfigs {
+              release {
+                storeFile file('android-release.keystore')
+                storePassword System.getenv('KEYSTORE_PASSWORD')
+                keyAlias System.getenv('KEY_ALIAS')
+                keyPassword System.getenv('KEY_PASSWORD')
+              }
+            }
+            buildTypes {
+              release {
+                signingConfig signingConfigs.release
+              }
+            }
+          }
+          EOF
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Build APK
+        run: |
+          VARIANT="${{ github.event.inputs.variant }}"
+          if [ -z "$VARIANT" ]; then VARIANT=release; fi
+          cd android
+          chmod +x gradlew
+          if [ "$VARIANT" = "debug" ]; then
+            ./gradlew assembleDebug --no-daemon --stacktrace
+          else
+            ./gradlew assembleRelease --no-daemon --stacktrace
+          fi
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cinetor-apk
+          path: |
+            android/app/build/outputs/apk/**/*.apk
+
+      - name: Rename + checksum
+        run: |
+          APK=$(find android/app/build/outputs/apk -name "*.apk" | head -1)
+          cp "$APK" cinetor-${{ github.event.inputs.variant || 'release' }}.apk
+          sha256sum cinetor-*.apk > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Release (tag only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            cinetor-*.apk
+            SHA256SUMS.txt
