@@ -19,4 +19,4 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
       - name: Test
-        run: npm test --if-present
+        run: npm test -- --passWithNoTests
