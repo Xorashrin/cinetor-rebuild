@@ -83,7 +83,7 @@ export const useScan = create<ScanState>((set, get) => ({
 
 function bdixEnabled(): boolean {
   const v = sectionStore.get('bdix.enabled', 'settings');
-  return v === '1';
+  return v !== '0';
 }
 
 async function isWifi(): Promise<boolean> {
