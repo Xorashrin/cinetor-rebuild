@@ -78,4 +78,12 @@ function parseM3u(text:string): MediaItem[] {
   } return items;
 }
 
+import { CLOUDSTREAM_REPOS, fetchCloudStreamRepo, classifyCloudStreamExtension, type CloudStreamExtension } from './cloudstreamEngine';
+
 export function registerBuiltinSources() { registerSource(anilist); registerSource(iptvOrg); }
+export async function loadLatestCloudStreamExtensions(): Promise<CloudStreamExtension[]> {
+  const results = await Promise.allSettled(CLOUDSTREAM_REPOS.map(fetchCloudStreamRepo));
+  return results.filter((r): r is PromiseFulfilledResult<CloudStreamExtension[]> => r.status === 'fulfilled')
+    .flatMap(r => r.value)
+    .map(item => ({ ...item, section: classifyCloudStreamExtension(item.name) }));
+}
